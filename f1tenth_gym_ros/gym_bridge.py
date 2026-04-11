@@ -165,6 +165,10 @@ class GymBridge(Node):
         self.declare_parameter('scale', 1.0)
         self.declare_parameter('vehicle_params', 'f1tenth')
         self.declare_parameter('async_mode', True)
+        self.declare_parameter('control_noise_std', 0.0)
+        self.declare_parameter('dynamics_noise_std', 0.0)
+        self.declare_parameter('servo_delay_ticks', 0)     # 0=instant, 3=~30-50ms lag
+        self._steer_buffer = []  # ring buffer for servo delay
         # Flag to know whether to publish the sim time or not
         # Has to be different than use_sim_time so we can still use real time to trigger timer callbacks
         self.declare_parameter('use_sim_time_bridge', False)
@@ -398,8 +402,28 @@ class GymBridge(Node):
         if self.sim_paused:
             return  # Skip stepping the sim if paused
 
-        self.ego_requested_speed = drive_msg.drive.speed
-        self.ego_steer = np.clip(drive_msg.drive.steering_angle, self.vehicle_params.s_min, self.vehicle_params.s_max)
+        speed = drive_msg.drive.speed
+        steer = drive_msg.drive.steering_angle
+        # Control noise: actuator jitter
+        ctrl_noise = self.get_parameter('control_noise_std').value
+        if ctrl_noise > 0.0:
+            speed += np.random.normal(0, ctrl_noise * 0.1)
+            steer += np.random.normal(0, ctrl_noise * 0.005)
+        # Dynamics noise: friction/force variation
+        dyn_noise = self.get_parameter('dynamics_noise_std').value
+        if dyn_noise > 0.0:
+            speed *= (1.0 + np.random.normal(0, dyn_noise * 0.03))
+            steer += np.random.normal(0, dyn_noise * 0.01) * speed
+        # Servo delay: buffer steering commands to simulate real servo lag
+        delay = int(self.get_parameter('servo_delay_ticks').value)
+        if delay > 0:
+            self._steer_buffer.append(steer)
+            if len(self._steer_buffer) > delay:
+                steer = self._steer_buffer.pop(0)
+            else:
+                steer = self._steer_buffer[0]  # hold first command until buffer fills
+        self.ego_requested_speed = speed
+        self.ego_steer = np.clip(steer, self.vehicle_params.s_min, self.vehicle_params.s_max)
         
         if not self.get_parameter('async_mode').value:
             # step the sim immediately and publish odom and scan
