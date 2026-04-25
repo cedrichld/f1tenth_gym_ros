@@ -1,5 +1,4 @@
 image: racetrack_levine_cleaned.pgm
-mode: trinary
 resolution: 0.05
 origin: [-2.27, -1.22, 0]
 negate: 0

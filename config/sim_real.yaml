@@ -23,7 +23,7 @@ bridge:
     scan_angle_max: 135.0
 
     # map
-    map_path: 'maps/racetrack_levine_cleaned'
+    map_path: 'maps/skirk_bas1'
     map_img_ext: '.png'
 
     # car
