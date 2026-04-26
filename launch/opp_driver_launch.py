@@ -7,7 +7,7 @@ import os
 def generate_launch_description():
     pkg_share = get_package_share_directory('pure_pursuit')
     opp_params = os.path.join(pkg_share, 'config', 'zach_params', 'opp_sim_params.yaml')
-    csv_path = os.path.join(pkg_share, 'waypoints', 'old', 'sim', 'sim_waypoints_2_smoothed_profiled.csv')
+    csv_path = os.path.join(pkg_share, 'waypoints', 'race', 'lev_blocked.csv')
 
     return LaunchDescription([
         Node(
