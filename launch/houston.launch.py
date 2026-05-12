@@ -233,7 +233,7 @@ def generate_launch_description():
     ld.add_action(
         DeclareLaunchArgument(
             'open_foxglove',
-            default_value='true',
+            default_value='false',
             description='Whether to open Foxglove in a browser.',
         )
     )
