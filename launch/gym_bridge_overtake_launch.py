@@ -25,9 +25,8 @@ import pathlib
 import yaml
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription, LogInfo
+from launch.actions import DeclareLaunchArgument, ExecuteProcess, LogInfo
 from launch.conditions import IfCondition
-from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import Command, LaunchConfiguration
 from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
@@ -247,11 +246,9 @@ def generate_launch_description():
     ld.add_action(ego_robot_publisher)
     if has_opp:
         ld.add_action(opp_robot_publisher)
-        ld.add_action(IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(
-                os.path.join(package_share, 'launch', 'opp_driver_launch.py')
-            )
-        ))
+        # NOTE: the opponent driver is no longer launched here. Launch it from
+        # your own controller package, e.g.:
+        #   ros2 launch pure_pursuit opp_drivers_launch.py
     ld.add_action(foxglove_log)
     ld.add_action(foxglove_ws_log)
     ld.add_action(foxglove_layout_log)

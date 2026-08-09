@@ -67,7 +67,7 @@ def generate_launch_description():
     config = os.path.join(package_share, 'config', 'sim.yaml')
     with open(config, 'r') as config_file:
         config_dict = yaml.safe_load(config_file)
-    has_opp = config_dict['bridge']['ros__parameters']['num_agent'] > 1
+    num_agents = config_dict['bridge']['ros__parameters']['num_agent']
     teleop = config_dict['bridge']['ros__parameters']['kb_teleop']
     use_sim_time = config_dict['bridge']['ros__parameters']['use_sim_time']
     foxglove_config = config_dict.get('foxglove', {})
@@ -199,19 +199,26 @@ def generate_launch_description():
         ],
         remappings=[('/robot_description', 'ego_robot_description')]
     )
-    opp_robot_publisher = Node(
-        package='robot_state_publisher',
-        executable='robot_state_publisher',
-        name='opp_robot_state_publisher',
-        parameters=[
-            {'robot_description': Command([
-                'xacro ',
-                os.path.join(get_package_share_directory('f1tenth_gym_ros'), 'urdf', 'opp_racecar.xacro')
-            ])},
-            {'use_sim_time': use_sim_time},
-        ],
-        remappings=[('/robot_description', 'opp_robot_description')]
-    )
+    # One robot_state_publisher per opponent; namespaces follow the bridge's
+    # scheme: opp_racecar, opp_racecar2, opp_racecar3
+    opp_namespace = config_dict['bridge']['ros__parameters'].get('opp_namespace', 'opp_racecar')
+    opp_robot_publishers = []
+    for i in range(1, num_agents):
+        suffix = '' if i == 1 else str(i)
+        opp_robot_publishers.append(Node(
+            package='robot_state_publisher',
+            executable='robot_state_publisher',
+            name='opp_robot_state_publisher' + suffix,
+            parameters=[
+                {'robot_description': Command([
+                    'xacro ',
+                    os.path.join(get_package_share_directory('f1tenth_gym_ros'), 'urdf', 'opp_racecar.xacro'),
+                    ' car_name:=', opp_namespace + suffix,
+                ])},
+                {'use_sim_time': use_sim_time},
+            ],
+            remappings=[('/robot_description', 'opp_robot_description' + suffix)]
+        ))
 
     # finalize
     ld.add_action(
@@ -275,7 +282,7 @@ def generate_launch_description():
     ld.add_action(nav_lifecycle_node)
     ld.add_action(map_server_node)
     ld.add_action(ego_robot_publisher)
-    if has_opp:
+    for opp_robot_publisher in opp_robot_publishers:
         ld.add_action(opp_robot_publisher)
     ld.add_action(foxglove_log)
     ld.add_action(foxglove_ws_log)
